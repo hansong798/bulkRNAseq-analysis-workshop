@@ -6,10 +6,115 @@ This is for bulkRNAseq analysis workshop using R.
 ### Table of Content  
   * [Preparation](#preparation)
   * [Analysis](#analysis)
-    * [Step 1. Read files and create seurat objects](#step-1-read-files-and-create-seurat-objects)
+    * [Step 1. Read dataset](#step-1-read-dataset)
     * [Step 2. Quality control](#step-2-quality-control)
     * [Step 3. Integration](#step-3-integration)
     * [Step 4. Run UMAP on a single integrated dataset](#step-4-run-umap-on-a-single-integrated-dataset)
     * [Step 5. Clustering](#step-5-clustering)
     * [Step 6. Annotation](#step-6-annotation)
     * [Step 7. Save the result](#step-7-save-the-result)
+
+## Preparation
+### Install required packages 
+install.packages(c("ggplot2","dplyr","data.table","tidyverse","BiocManager"))
+BiocManager::install("biomaRt")   
+BiocManager::install("DESeq2")
+BiocManager::install("org.Hs.eg.db") 
+
+library(ggplot2)
+library(dplyr)
+library(data.table)
+library(tidyverse)
+library(BiocManager)
+library(biomaRt)
+library(DESeq2)
+library(org.Hs.eg.db)
+
+## Analysis
+### step 1. Read dataset
+getwd()
+raw_count <- read.table('/content/GSE152418_p20047_Study1_RawCounts.txt', header = T, row.names = 1)
+raw_count   # Ensembl Gene ID
+dim(raw_count)
+class(raw_count)
+
+raw_count_matrix <- as.matrix.data.frame(raw_count)
+str(raw_count_matrix)
+
+# [1] Preprocessing
+colnames(raw_count)
+col <- colnames(raw_count)
+group <- col
+group[grepl('COV',group)|grepl('CoV',group)] <- 'COVID19'
+group[!grepl('COV',group) & !grepl('CoV',group)] <- 'Healthy'
+group
+
+group <- factor(group, levels = c('Healthy','COVID19'))  # 첫번째가 reference level이 됨
+group
+str(group)
+table(group)
+
+colData = data.frame(sample = col, group = group)
+dds <- DESeqDataSetFromMatrix(raw_count_matrix, colData = colData, design = ~group)
+dds
+
+# [2] Filtering
+keep <- rowSums(counts(dds)) >= 10
+dds <- dds[keep,]
+dds
+
+# [3] Run DESeq
+dds <- DESeq(dds)
+
+res <- results(dds)
+res
+#baseMean: 모든 샘플의 normalized average
+#log2FoldChange: case vs control log2FoldChange (+)
+#lfeSE: log2FC standard error
+#stat: Wald test statistics
+#pvalue
+#padj: corrected pvalue (Benjamini-Hochberg (BH))
+
+
+summary(res)
+res_filt <- results(dds, alpha = 0.01, lfcThreshold = 0.5)
+summary(res_filt)
+
+upregulated <- subset(res_filt, padj < 0.01 & log2FoldChange > 2)
+downregulated <- subset(res_filt, padj < 0.01 & log2FoldChange < -2)
+
+upregulated
+downregulated
+
+write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.names = F, col.names = F)
+write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
+
+
+# [4]
+listEnsembl()
+ensembl <- useEnsembl(biomart = "genes")
+searchDatasets(mart = ensembl, pattern = "Human")
+ensembl <- useEnsembl(biomart = 'genes',
+                      dataset = 'hsapiens_gene_ensembl')
+ensembl_attributes <- listAttributes(ensembl)
+head(ensembl_attributes, 20)
+
+up_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
+                  filters = "ensembl_gene_id",
+                  values = rownames(upregulated),
+                  mart = ensembl)
+head(up_annot)
+
+down_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
+                    filters = "ensembl_gene_id",
+                    values = rownames(downregulated),
+                    mart = ensembl)
+head(down_annot)
+
+write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
+write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
+
+
+
+
+
