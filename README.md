@@ -34,7 +34,7 @@ library(org.Hs.eg.db)
 ### Download and read GSE dataset
 ```R
 getwd()
-raw_count <- read.table('/content/GSE152418_p20047_Study1_RawCounts.txt', header = T, row.names = 1)
+raw_count <- read.table('your_path/GSE152418_p20047_Study1_RawCounts.txt', header = T, row.names = 1)
 raw_count   # Ensembl Gene ID
 dim(raw_count)
 class(raw_count)
@@ -101,7 +101,7 @@ upregulated
 downregulated
 ```
 
-#### save results as txt files
+#### Save results as txt files
 ```R
 write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
@@ -118,7 +118,7 @@ ensembl_attributes <- listAttributes(ensembl)
 head(ensembl_attributes, 20)
 ```
 
-#### convert ensembl into gene symbol for each up and down DEGs
+#### Convert ensembl into gene symbol for each up and down DEGs
 ```R
 up_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
                   filters = "ensembl_gene_id",
@@ -133,7 +133,7 @@ down_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
 head(down_annot)
 ```
 
-#### save results
+#### Save results for future analysis
 ```R
 write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
