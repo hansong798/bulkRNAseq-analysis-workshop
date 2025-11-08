@@ -6,21 +6,19 @@ This is for bulkRNAseq analysis workshop using R.
 ### Table of Content  
   * [Preparation](#preparation)
   * [Analysis](#analysis)
-    * [Step 1. Read dataset](#step-1-read-dataset)
-    * [Step 2. Quality control](#step-2-quality-control)
-    * [Step 3. Integration](#step-3-integration)
-    * [Step 4. Run UMAP on a single integrated dataset](#step-4-run-umap-on-a-single-integrated-dataset)
-    * [Step 5. Clustering](#step-5-clustering)
-    * [Step 6. Annotation](#step-6-annotation)
-    * [Step 7. Save the result](#step-7-save-the-result)
+    * [Step 1. Preprocessing](#step-1-Preprocessing)
+    * [Step 2. Filtering](#step-2-Filtering)
+    * [Step 3. Run DESeq](#step-3-Run-DESeq)
+    * [Step 4. Annotation](#step-4-Annotation)
 
 ## Preparation
 ### Install required packages 
+```R
 install.packages(c("ggplot2","dplyr","data.table","tidyverse","BiocManager"))
 BiocManager::install("biomaRt")   
 BiocManager::install("DESeq2")
 BiocManager::install("org.Hs.eg.db") 
-
+```
 library(ggplot2)
 library(dplyr)
 library(data.table)
@@ -30,8 +28,7 @@ library(biomaRt)
 library(DESeq2)
 library(org.Hs.eg.db)
 
-## Analysis
-### step 1. Read dataset
+### Download and read GSE dataset
 getwd()
 raw_count <- read.table('/content/GSE152418_p20047_Study1_RawCounts.txt', header = T, row.names = 1)
 raw_count   # Ensembl Gene ID
@@ -41,7 +38,8 @@ class(raw_count)
 raw_count_matrix <- as.matrix.data.frame(raw_count)
 str(raw_count_matrix)
 
-# [1] Preprocessing
+## Analysis
+### step 1. Preprocessing
 colnames(raw_count)
 col <- colnames(raw_count)
 group <- col
@@ -58,16 +56,16 @@ colData = data.frame(sample = col, group = group)
 dds <- DESeqDataSetFromMatrix(raw_count_matrix, colData = colData, design = ~group)
 dds
 
-# [2] Filtering
+### step 2. Filtering
 keep <- rowSums(counts(dds)) >= 10
 dds <- dds[keep,]
 dds
 
-# [3] Run DESeq
+#### step 3. Run DESeq
 dds <- DESeq(dds)
-
 res <- results(dds)
 res
+
 #baseMean: 모든 샘플의 normalized average
 #log2FoldChange: case vs control log2FoldChange (+)
 #lfeSE: log2FC standard error
@@ -75,7 +73,7 @@ res
 #pvalue
 #padj: corrected pvalue (Benjamini-Hochberg (BH))
 
-
+### Extract results
 summary(res)
 res_filt <- results(dds, alpha = 0.01, lfcThreshold = 0.5)
 summary(res_filt)
@@ -90,7 +88,7 @@ write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.na
 write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
 
 
-# [4]
+### step 4. Annotation
 listEnsembl()
 ensembl <- useEnsembl(biomart = "genes")
 searchDatasets(mart = ensembl, pattern = "Human")
@@ -113,6 +111,8 @@ head(down_annot)
 
 write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
+
+
 
 
 
