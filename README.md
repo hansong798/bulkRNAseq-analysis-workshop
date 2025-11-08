@@ -27,8 +27,10 @@ library(BiocManager)
 library(biomaRt)
 library(DESeq2)
 library(org.Hs.eg.db)
+```
 
 ### Download and read GSE dataset
+```R
 getwd()
 raw_count <- read.table('/content/GSE152418_p20047_Study1_RawCounts.txt', header = T, row.names = 1)
 raw_count   # Ensembl Gene ID
@@ -37,9 +39,12 @@ class(raw_count)
 
 raw_count_matrix <- as.matrix.data.frame(raw_count)
 str(raw_count_matrix)
+```
 
 ## Analysis
 ### step 1. Preprocessing
+Create group information
+```R
 colnames(raw_count)
 col <- colnames(raw_count)
 group <- col
@@ -51,17 +56,24 @@ group <- factor(group, levels = c('Healthy','COVID19'))  # 첫번째가 referenc
 group
 str(group)
 table(group)
+```
 
+Create DESeq object
+```R
 colData = data.frame(sample = col, group = group)
 dds <- DESeqDataSetFromMatrix(raw_count_matrix, colData = colData, design = ~group)
 dds
+```
 
 ### step 2. Filtering
+```R
 keep <- rowSums(counts(dds)) >= 10
 dds <- dds[keep,]
 dds
+```
 
-#### step 3. Run DESeq
+### step 3. Run DESeq
+```R
 dds <- DESeq(dds)
 res <- results(dds)
 res
@@ -72,8 +84,10 @@ res
 #stat: Wald test statistics
 #pvalue
 #padj: corrected pvalue (Benjamini-Hochberg (BH))
+```
 
-### Extract results
+#### Extract results
+```R
 summary(res)
 res_filt <- results(dds, alpha = 0.01, lfcThreshold = 0.5)
 summary(res_filt)
@@ -83,12 +97,16 @@ downregulated <- subset(res_filt, padj < 0.01 & log2FoldChange < -2)
 
 upregulated
 downregulated
+```
 
+save results as txt files
+```R
 write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
-
+```
 
 ### step 4. Annotation
+```R
 listEnsembl()
 ensembl <- useEnsembl(biomart = "genes")
 searchDatasets(mart = ensembl, pattern = "Human")
@@ -96,7 +114,10 @@ ensembl <- useEnsembl(biomart = 'genes',
                       dataset = 'hsapiens_gene_ensembl')
 ensembl_attributes <- listAttributes(ensembl)
 head(ensembl_attributes, 20)
+```
 
+convert ensembl into gene symbol for each up and down DEGs
+```R
 up_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
                   filters = "ensembl_gene_id",
                   values = rownames(upregulated),
@@ -108,10 +129,14 @@ down_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
                     values = rownames(downregulated),
                     mart = ensembl)
 head(down_annot)
+```
 
+save results
+```R
 write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
 
+```
 
 
 
