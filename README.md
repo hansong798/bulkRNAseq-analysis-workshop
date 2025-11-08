@@ -19,6 +19,8 @@ BiocManager::install("biomaRt")
 BiocManager::install("DESeq2")
 BiocManager::install("org.Hs.eg.db") 
 ```
+### Load required packages 
+```R
 library(ggplot2)
 library(dplyr)
 library(data.table)
@@ -43,7 +45,7 @@ str(raw_count_matrix)
 
 ## Analysis
 ### step 1. Preprocessing
-Create group information
+#### Create group information
 ```R
 colnames(raw_count)
 col <- colnames(raw_count)
@@ -58,7 +60,7 @@ str(group)
 table(group)
 ```
 
-Create DESeq object
+#### Create DESeq object
 ```R
 colData = data.frame(sample = col, group = group)
 dds <- DESeqDataSetFromMatrix(raw_count_matrix, colData = colData, design = ~group)
@@ -99,7 +101,7 @@ upregulated
 downregulated
 ```
 
-save results as txt files
+#### save results as txt files
 ```R
 write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
@@ -116,7 +118,7 @@ ensembl_attributes <- listAttributes(ensembl)
 head(ensembl_attributes, 20)
 ```
 
-convert ensembl into gene symbol for each up and down DEGs
+#### convert ensembl into gene symbol for each up and down DEGs
 ```R
 up_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
                   filters = "ensembl_gene_id",
@@ -131,11 +133,12 @@ down_annot <- getBM(attributes= c("ensembl_gene_id", "external_gene_name"),
 head(down_annot)
 ```
 
-save results
+#### save results
 ```R
 write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
 write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
 
+save(upregulated, downregulated, up_annot, down_annot, file = 'your_path_to_save.RData')
 ```
 
 
