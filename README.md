@@ -45,6 +45,8 @@ str(raw_count_matrix)
 
 ## Analysis
 ### step 1. Preprocessing
+#### Required information: group (factor), colData, count (matrix)
+
 #### Create group information
 ```R
 colnames(raw_count)
@@ -101,12 +103,6 @@ upregulated
 downregulated
 ```
 
-#### Save results as txt files
-```R
-write.csv(rownames(downregulated), file = 'down_ensembl.txt', sep = '\t', row.names = F, col.names = F)
-write.csv(rownames(upregulated), file = 'up_ensembl.txt', sep = '\t', row.names = F, col.names = F)
-```
-
 ### step 4. Annotation
 ```R
 listEnsembl()
@@ -116,6 +112,7 @@ ensembl <- useEnsembl(biomart = 'genes',
                       dataset = 'hsapiens_gene_ensembl')
 ensembl_attributes <- listAttributes(ensembl)
 head(ensembl_attributes, 20)
+# external_gene_name (233th)
 ```
 
 #### Convert ensembl into gene symbol for each up and down DEGs
@@ -135,8 +132,8 @@ head(down_annot)
 
 #### Save results for future analysis
 ```R
-write.csv(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
-write.csv(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
+write.table(down_annot$external_gene_name, file = 'down_genename.txt', sep = '\t', row.names = F, col.names = F)
+write.table(up_annot$external_gene_name, file = 'up_genename.txt', sep = '\t', row.names = F, col.names = F)
 
 save(upregulated, downregulated, up_annot, down_annot, file = 'your_path_to_save.RData')
 ```
